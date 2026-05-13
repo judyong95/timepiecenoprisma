@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { prisma } from "@/lib/db"
+import { pool } from "@/lib/db"
 import { auth } from "@/lib/auth"
 import { z } from "zod"
 
@@ -14,8 +14,8 @@ const watchSchema = z.object({
 
 export async function GET() {
   try {
-    const watches = await prisma.watch.findMany()
-    return NextResponse.json(watches)
+    const result = await pool.query('SELECT * FROM "Watch" ORDER BY name')
+    return NextResponse.json(result.rows)
   } catch (error) {
     console.error("Error fetching watches:", error)
     return NextResponse.json({ message: "Failed to fetch watches" }, { status: 500 })
@@ -33,11 +33,13 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const validatedData = watchSchema.parse(body)
 
-    const newWatch = await prisma.watch.create({
-      data: validatedData,
-    })
+    const id = crypto.randomUUID()
+    const result = await pool.query(
+      'INSERT INTO "Watch" (id, name, brand, year, description, "imageSrc") VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+      [id, validatedData.name, validatedData.brand, validatedData.year, validatedData.description, validatedData.imageSrc]
+    )
 
-    return NextResponse.json(newWatch, { status: 201 })
+    return NextResponse.json(result.rows[0], { status: 201 })
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ message: "Invalid request data", errors: error.errors }, { status: 400 })

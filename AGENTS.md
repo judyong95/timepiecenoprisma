@@ -6,7 +6,8 @@
 - shadcn/ui new-york style, Radix UI primitives, lucide-react icons
 - `next-themes` (class-based dark mode via `.dark`)
 - `@vercel/analytics` (production only)
-- Auth.js v5 (`next-auth` beta), Prisma 6 + SQLite, `bcryptjs` (credentials auth)
+- Auth.js v5 (`next-auth` beta), `pg` (node-postgres), `bcryptjs` (credentials auth)
+- PostgreSQL database (Neon)
 
 ## Package manager
 pnpm (lockfile: `pnpm-lock.yaml`)
@@ -18,9 +19,8 @@ pnpm (lockfile: `pnpm-lock.yaml`)
 | `pnpm build` | `next build` |
 | `pnpm start` | `next start` |
 | `pnpm lint` | `tsc --noEmit` |
-| `pnpm db:push` | `prisma db push` |
-| `pnpm db:seed` | seed default admin user |
-| `pnpm db:studio` | `prisma studio` |
+| `pnpm db:init` | create database tables (run once) |
+| `pnpm db:seed` | seed admin user and default watches |
 
 ## Known quirks
 - **TypeScript errors are invisible to `next build`** — `next.config.mjs` sets `typescript.ignoreBuildErrors: true`. Run `tsc --noEmit` for real type checking.
@@ -36,8 +36,9 @@ pnpm (lockfile: `pnpm-lock.yaml`)
 - Admin dashboard at `/admin` (protected, shows watch list with sign-out)
 - Login at `/login` (email/password form)
 - Auth API at `/api/auth/[...nextauth]`
-- SQLite database (`prisma/dev.db`) with single `User` table
+- Watch API at `/api/watches` (GET/POST) and `/api/watches/[id]` (PUT/DELETE)
+- PostgreSQL database (Neon) with `User` and `Watch` tables
+- Raw SQL queries via `pg` (node-postgres) in `lib/db.ts`
 - Default admin: `admin@example.com` / `admin123` (from `prisma/seed.js`)
-- No API routes, no database queries on the public site
-- Data is static (hardcoded in `app/page.tsx`)
+- Data is fetched from database at runtime (`export const dynamic = 'force-dynamic'`)
 - `components/ui/` — 57 shadcn/ui primitives (most unused)

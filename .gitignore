@@ -11,10 +11,6 @@ next.user-config.*
 .env
 .env*.local
 
-# Database
-prisma/*.db
-prisma/*.db-journal
-
 # Common ignores
 node_modules
 .next/

@@ -1,27 +1,29 @@
-const { PrismaClient } = require("@prisma/client")
+const { Pool } = require("pg")
 const { hash } = require("bcryptjs")
 
-const prisma = new PrismaClient()
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false,
+  },
+})
 
 async function main() {
   // Seed admin user
   const password = await hash("admin123", 12)
+  const adminId = crypto.randomUUID()
 
-  await prisma.user.upsert({
-    where: { email: "admin@example.com" },
-    update: {},
-    create: {
-      email: "admin@example.com",
-      password,
-      name: "Admin",
-    },
-  })
+  await pool.query(
+    'INSERT INTO "User" (id, email, password, name) VALUES ($1, $2, $3, $4) ON CONFLICT (email) DO NOTHING',
+    [adminId, "admin@example.com", password, "Admin"]
+  )
 
   console.log('Seeded admin user: admin@example.com / admin123')
 
   // Seed original watches
   const watches = [
     {
+      id: crypto.randomUUID(),
       name: "Tank",
       brand: "Cartier",
       year: "1917",
@@ -29,6 +31,7 @@ async function main() {
       imageSrc: "/images/cartier-tank.jpg",
     },
     {
+      id: crypto.randomUUID(),
       name: "Crash",
       brand: "Cartier",
       year: "1967",
@@ -36,6 +39,7 @@ async function main() {
       imageSrc: "/images/cartier-crash.jpg",
     },
     {
+      id: crypto.randomUUID(),
       name: "Reverso",
       brand: "Jaeger-LeCoultre",
       year: "1931",
@@ -44,11 +48,15 @@ async function main() {
     },
   ]
 
-  // Clear existing watches and create fresh
-  await prisma.watch.deleteMany()
-  await prisma.watch.createMany({
-    data: watches,
-  })
+  // Clear existing watches and insert fresh
+  await pool.query('DELETE FROM "Watch"')
+  
+  for (const watch of watches) {
+    await pool.query(
+      'INSERT INTO "Watch" (id, name, brand, year, description, "imageSrc") VALUES ($1, $2, $3, $4, $5, $6)',
+      [watch.id, watch.name, watch.brand, watch.year, watch.description, watch.imageSrc]
+    )
+  }
 
   console.log('Seeded 3 watches: Tank, Crash, Reverso')
 }
@@ -58,4 +66,4 @@ main()
     console.error(e)
     process.exit(1)
   })
-  .finally(() => prisma.$disconnect())
+  .finally(() => pool.end())

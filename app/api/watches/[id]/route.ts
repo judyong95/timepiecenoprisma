@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { prisma } from "@/lib/db"
+import { pool } from "@/lib/db"
 import { auth } from "@/lib/auth"
 import { z } from "zod"
 
@@ -23,12 +23,12 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
     const body = await req.json()
     const validatedData = watchSchema.parse(body)
 
-    const updatedWatch = await prisma.watch.update({
-      where: { id },
-      data: validatedData,
-    })
+    const result = await pool.query(
+      'UPDATE "Watch" SET name = $1, brand = $2, year = $3, description = $4, "imageSrc" = $5 WHERE id = $6 RETURNING *',
+      [validatedData.name, validatedData.brand, validatedData.year, validatedData.description, validatedData.imageSrc, id]
+    )
 
-    return NextResponse.json(updatedWatch)
+    return NextResponse.json(result.rows[0])
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ message: "Invalid request data", errors: error.errors }, { status: 400 })
@@ -47,9 +47,7 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ id: 
 
   try {
     const { id } = await context.params
-    await prisma.watch.delete({
-      where: { id },
-    })
+    await pool.query('DELETE FROM "Watch" WHERE id = $1', [id])
 
     return NextResponse.json({ message: "Watch deleted successfully" })
   } catch (error) {
